@@ -1,27 +1,25 @@
-import { S3 } from "aws-sdk";
+import createS3Client from "../libs/s3Client.js";
+import { ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 export default async function listAllS3Keys(
 	s3Bucket: string
 ): Promise<string[]> {
-	const s3 = new S3();
+	const s3 = createS3Client("us-west-2");
 	const keys: string[] = [];
-	let token: string | undefined = undefined;
+	const params = {
+		Bucket: s3Bucket,
+	};
 
-	do {
-		const response = await s3
-			.listObjectsV2({
-				Bucket: s3Bucket,
-				ContinuationToken: token,
-			})
-			.promise();
-		// Add .filter(Boolean) function as a check to filter out any null or undefined values
+	try {
+		const response = await s3.send(new ListObjectsV2Command(params));
 		if (response.Contents) {
-			keys.push(...response.Contents.map((o) => o.Key!).filter(Boolean));
+			keys.push(
+				...response.Contents.map((obj) => obj.Key!).filter(Boolean)
+			);
 		}
-		token = response.IsTruncated
-			? response.NextContinuationToken
-			: undefined;
-	} while (token);
+	} catch (err) {
+		console.error("Error", err);
+	}
 
 	return keys;
 }
