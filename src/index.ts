@@ -1,4 +1,4 @@
-import { copyS3ToGCS } from "./function/copyS3ToGCS.js";
+import { copyS3ToGCS } from "./functions/copyS3ToGCS.js";
 
 async function handler(
 	s3Bucket: string,
