@@ -5,6 +5,9 @@
 		"strict": true,
 		"esModuleInterop": true,
 		"outDir": "dist",
-		"moduleResolution": "nodenext"
-	}
+		"moduleResolution": "nodenext",
+		"noEmit": false,
+		"skipLibCheck": true
+	},
+	"exclude": ["node_modules", "**/*.test.ts"]
 }

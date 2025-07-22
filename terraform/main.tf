@@ -2,6 +2,52 @@ provider "aws" {
   region = "us-west-2"
 }
 
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "execution_role_for_lambda" {
+  name               = "lambda_execution_role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+data "archive_file" "lambda_archive_file" {
+  type        = "zip"
+  source_file = "${path.module}/dist/index.js"
+  output_path = "${path.module}/lambda/function.zip"
+}
+
+# Create the Lambda function
+resource "aws_lambda_function" "copy_s3_to_gcs" {
+  filename         = "data.archive_file.lambda_archive_file.output_path"
+  function_name    = "copy_s3_to_gcs"
+  role             = aws_iam_role.execution_role_for_lambda.arn
+  handler          = "index.handler"
+  source_code_hash = "data.archive_file.lambda_archive_file.output_base64sha256"
+
+  runtime = "nodejs22.x"
+
+  environment {
+    variables = {
+      ENVIRONMEMT = "dev"
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+    Application = "copy_s3_file_to_gcs_service"
+  }
+}
+
 # Create an AWS bucket
 resource "aws_s3_bucket" "incoming_files" {
   bucket = "emiya-todo-incoming-files"
@@ -35,42 +81,5 @@ resource "aws_s3_bucket_lifecycle_configuration" "archived_files_delete_30_days"
     expiration {
       days = 30
     }
-  }
-}
-
-# Create an SQS queue to notify GCS of a new file
-resource "aws_sqs_queue" "file_transfer_to_gcs_queue" {
-  name                      = "emiya-todo-aws-to-gcs-file-queue"
-  delay_seconds             = 90
-  max_message_size          = 2048
-  message_retention_seconds = 86400
-  receive_wait_time_seconds = 10
-
-  tags = {
-    Environment = "dev"
-  }
-
-  policy = {
-    "Version" : "2012-10-17",
-    "Id" : "example-ID",
-    "Statement" : [
-      {
-        "Sid" : "example-statement-ID",
-        "Effect" : "Allow",
-        "Principal" : {
-          "Service" : "s3.amazonaws.com"
-        },
-        "Action" : "SQS:SendMessage",
-        "Resource" : "RESOURCE",
-        "Condition" : {
-          "StringEquals" : {
-            "aws:SourceAccount" : "AWS"
-          },
-          "ArnLike" : {
-            "aws:SourceArn" : "S3_BUCKET_ARN"
-          }
-        }
-      }
-    ]
   }
 }
