@@ -8,6 +8,7 @@
 	"main": "index.js",
 	"scripts": {
 		"build": "tsc",
+		"deploy": "npm run build && cd terraform && terraform apply",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
