@@ -18,6 +18,40 @@ data "aws_iam_policy_document" "assume_role" {
 resource "aws_iam_role" "execution_role_for_lambda" {
   name               = "lambda_execution_role"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
+
+}
+
+resource "aws_iam_role" "s3_access_role" {
+  name               = "s3_access_role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+resource "aws_iam_policy" "s3_bucket_access_policy" {
+  name        = "s3_bucket_access_policy"
+  description = "Allow access to S3 buckets"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:PutObject",
+        ]
+        Resource = [
+          aws_s3_bucket.incoming_files.arn,
+          "${aws_s3_bucket.incoming_files.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
+  role       = aws_iam_role.s3_access_role.name
+  policy_arn = aws_iam_policy.s3_bucket_access_policy.arn
+
 }
 
 data "archive_file" "lambda_archive_file" {
