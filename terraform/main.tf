@@ -54,21 +54,31 @@ resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
 
 }
 
-data "archive_file" "lambda_archive_file" {
+data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "../dist/index.js"
-  output_path = "${path.root}/function.zip"
+  source_dir  = "../dist"
+  output_path = "../lambda_function.zip"
+}
+
+resource "aws_s3_object" "lambda_code_upload" {
+  bucket = aws_s3_bucket.cloud_file_service_lambda.bucket
+  key    = "lambda_function.zip"
+  source = data.archive_file.lambda_zip.output_path
+  etag   = filebase64sha512(data.archive_file.lambda_zip.output_path)
 }
 
 # Create the Lambda function
 resource "aws_lambda_function" "copy_s3_to_gcs" {
-  filename         = data.archive_file.lambda_archive_file.output_path
   function_name    = "copy_s3_to_gcs"
   role             = aws_iam_role.execution_role_for_lambda.arn
   handler          = "index.handler"
-  source_code_hash = data.archive_file.lambda_archive_file.output_base64sha256
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  s3_bucket        = aws_s3_object.lambda_code_upload.bucket
+  s3_key           = aws_s3_object.lambda_code_upload.key
 
   runtime = "nodejs22.x"
+
+
 
   environment {
     variables = {
@@ -79,6 +89,14 @@ resource "aws_lambda_function" "copy_s3_to_gcs" {
   tags = {
     Environment = "dev"
     Application = "copy_s3_file_to_gcs_service"
+  }
+}
+
+resource "aws_s3_bucket" "cloud_file_service_lambda" {
+  bucket = "cloud-file-service-lambda"
+
+  tags = {
+    Environment = "dev"
   }
 }
 

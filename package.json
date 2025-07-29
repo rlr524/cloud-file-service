@@ -7,7 +7,7 @@
 	"type": "module",
 	"main": "index.js",
 	"scripts": {
-		"build": "tsc",
+		"build": "npm ci && tsc && cp -r node_modules ./dist",
 		"deploy": "npm run build && cd terraform && terraform apply",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
