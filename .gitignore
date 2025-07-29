@@ -110,9 +110,10 @@ dist
 # Serverless directories
 .serverless/
 
-# Terraform
+# Terraform Deployment
 **/.terraform
 .terraform.lock.hcl
+lambda_function.zip
 
 # FuseBox cache
 .fusebox/
